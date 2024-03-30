@@ -17,6 +17,7 @@ df['order_date'] = pd.to_datetime(df.order_date)
 df['order_date'] = df['order_date'].dt.date
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP])
+server = app.server
 
 
 cellStyle = {
