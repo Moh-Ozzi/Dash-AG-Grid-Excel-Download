@@ -6,7 +6,6 @@ from openpyxl.styles import Font, PatternFill, Border, Side
 import dash_ag_grid as dag
 from io import BytesIO
 
-
 df = pd.read_csv('https://raw.githubusercontent.com/Moh-Ozzi/My-public-data-sources/main/cleaned_superstore.csv',
                  low_memory=False)
 
@@ -39,20 +38,19 @@ columns_def = [
     {"field": "state"},
     {"field": "ship_mode"},
     {"field": "category"},
-    {"field": "quantity", "filter": "agNumberColumnFilter", 'type': 'rightAligned'},
-    {"field": "sales", "filter": "agNumberColumnFilter", 'type': 'rightAligned'},
-    {"field": "profit", "filter": "agNumberColumnFilter", 'type': 'rightAligned', "cellStyle": cellStyle},
+    {"field": "quantity", "filter": "agNumberColumnFilter", "type": "rightAligned"},
+    {"field": "sales", "filter": "agNumberColumnFilter", "type": "rightAligned"},
+    {"field": "profit", "filter": "agNumberColumnFilter", "type": "rightAligned", "cellStyle": cellStyle},
 ]
 
 grid = dag.AgGrid(id='table',
                   columnDefs=columns_def,
                   rowData=df.to_dict('records'),
-                  defaultColDef={"resizable": True, "sortable": True, 'editable': True, "filter": True},
-                  columnSize="sizeToFit",
+                  defaultColDef={"resizable": True, "sortable": True, "editable": True, "filter": True},
+                  columnSize='sizeToFit',
                   dashGridOptions={"pagination": True, "paginationPageSize": 20},
-                  className="ag-theme-alpine m-3",
-                  style={"height": 500, "width": '100%'}
-
+                  className='ag-theme-alpine m-3',
+                  style={"height": 500, "width": "100%"}
                   )
 
 app.layout = dbc.Container(
@@ -60,17 +58,15 @@ app.layout = dbc.Container(
         html.H1('Dash Ag Grid Excel Download', className='text-center text-primary'),
         grid,
         dbc.Button(id='button',
-                   children=[html.I(className="bi bi-cloud-download mr-2"), " Download"],
-                   className="m-1"
+                   children=[html.I(className='bi bi-cloud-download mr-2'), ' Download'],
+                   className='m-1'
                    ),
-        dcc.Download(id="download"),
-    ],
+        dcc.Download(id='download'),
+    ]
 )
 
 
-@callback(Output('download', 'data'),
-          Input('button', 'n_clicks'),
-          Input('table', 'virtualRowData'))
+@callback(Output('download', 'data'), Input('button', 'n_clicks'), Input('table', 'virtualRowData'))
 def export_data(clicks, vdata):
     if clicks and vdata:
         dff2 = pd.DataFrame(vdata)
@@ -98,20 +94,20 @@ def export_data(clicks, vdata):
         red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
         border = Border(left=Side(border_style="thin"), right=Side(border_style="thin"))
 
-        for row in sheet.iter_rows(min_row=2, min_col=1, max_col=9):
-            cell_col9 = row[8]
+        for row in sheet.iter_rows(min_row=2, min_col=1, max_col=10):
+            cell_col10 = row[9]
             cell_col1 = row[0]
-            if cell_col9.value is not None and cell_col9.value < 0:
-                cell_col9.fill = red_fill
-                cell_col9.font = Font(color="FFFFFF")
+            if cell_col10.value is not None and cell_col10.value < 0:
+                cell_col10.fill = red_fill
+                cell_col10.font = Font(color="FFFFFF")
                 cell_col1.fill = red_fill
                 cell_col1.font = Font(color="FFFFFF")
-            cell_col9.border = border
+            cell_col10.border = border
             cell_col1.border = border
 
         # Add a row for the total
-        total_row = ['Total', None, None, None, None, None, f"=SUBTOTAL(109, G2:G{sheet.max_row})",
-                     f"=SUBTOTAL(109, H2:H{sheet.max_row})", f"=SUBTOTAL(109, I2:I{sheet.max_row})"]
+        total_row = ['Total', None, None, None, None, None, None, f"=SUBTOTAL(109, H2:H{sheet.max_row})",
+                     f"=SUBTOTAL(109, I2:I{sheet.max_row})", f"=SUBTOTAL(109, J2:J{sheet.max_row})"]
         sheet.append(total_row)
 
         # Apply formatting to the total row
@@ -127,10 +123,10 @@ def export_data(clicks, vdata):
             cell.font = total_font
             cell.border = total_border
         # Create Excel table
-        table = openpyxl.worksheet.grid.Table(displayName="MyTable", ref=f"A1:I{last_row_index}")
-        table.tableStyleInfo = openpyxl.worksheet.grid.TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
-                                                                      showLastColumn=False, showRowStripes=True,
-                                                                      showColumnStripes=False)
+        table = openpyxl.worksheet.table.Table(displayName="MyTable", ref=f"A1:J{last_row_index}")
+        table.tableStyleInfo = openpyxl.worksheet.table.TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
+                                                                       showLastColumn=False, showRowStripes=True,
+                                                                       showColumnStripes=False)
         sheet.add_table(table)
         # Save Excel workbook to BytesIO stream
         output = BytesIO()
