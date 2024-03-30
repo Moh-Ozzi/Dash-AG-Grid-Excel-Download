@@ -7,10 +7,13 @@ import dash_ag_grid as dag
 from io import BytesIO
 
 
+df = pd.read_csv('https://raw.githubusercontent.com/Moh-Ozzi/My-public-data-sources/main/cleaned_superstore.csv',
+                 low_memory=False)
 
-df = pd.read_csv('https://raw.githubusercontent.com/Moh-Ozzi/My-public-data-sources/main/cleaned_superstore.csv', low_memory=False)
-
-df = df[['order_id', 'order_date', 'product_name', 'customer_name', 'ship_mode', 'state', 'category', 'quantity', 'sales', 'profit']]
+# Filter some dataframe columns and formatting
+df = df[
+    ['order_id', 'order_date', 'product_name', 'customer_name', 'ship_mode', 'state', 'category', 'quantity', 'sales',
+     'profit']]
 df['sales'] = df['sales'].round(2)
 df['profit'] = df['profit'].round(2)
 df['order_date'] = pd.to_datetime(df.order_date)
@@ -18,7 +21,6 @@ df['order_date'] = df['order_date'].dt.date
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP, dbc.icons.BOOTSTRAP])
 server = app.server
-
 
 cellStyle = {
     "styleConditions": [
@@ -42,38 +44,37 @@ columns_def = [
     {"field": "profit", "filter": "agNumberColumnFilter", 'type': 'rightAligned', "cellStyle": cellStyle},
 ]
 
+grid = dag.AgGrid(id='table',
+                  columnDefs=columns_def,
+                  rowData=df.to_dict('records'),
+                  defaultColDef={"resizable": True, "sortable": True, 'editable': True, "filter": True},
+                  columnSize="sizeToFit",
+                  dashGridOptions={"pagination": True, "paginationPageSize": 20},
+                  className="ag-theme-alpine m-3",
+                  style={"height": 500, "width": '100%'}
 
-table = dag.AgGrid(id='table',
-                   columnDefs=columns_def,
-                   rowData=df.to_dict('records'),
-                   defaultColDef={"resizable": True, "sortable": True, 'editable': True, "filter": True},
-                   columnSize="sizeToFit",
-                   # enableEnterpriseModules=True,
-                   dashGridOptions={"pagination": True, "paginationPageSize": 20},
-                   className="ag-theme-alpine",
-                   style={"height": 600, "width": '100%'}
-
-                   )
+                  )
 
 app.layout = dbc.Container(
     [
-        table,
+        html.H1('Dash Ag Grid Excel Download', className='text-center text-primary'),
+        grid,
         dbc.Button(id='button',
-            children=[html.I(className="bi bi-cloud-download mr-2"), " Download"],
-            # color="info",
-            className="m-1"
-        ),
+                   children=[html.I(className="bi bi-cloud-download mr-2"), " Download"],
+                   className="m-1"
+                   ),
         dcc.Download(id="download"),
-    ]
-    )
+    ],
+)
 
-@callback(Output("download", "data"), Input('button', 'n_clicks'), Input("table", "virtualRowData"))
+
+@callback(Output('download', 'data'),
+          Input('button', 'n_clicks'),
+          Input('table', 'virtualRowData'))
 def export_data(clicks, vdata):
     if clicks and vdata:
         dff2 = pd.DataFrame(vdata)
-        dff2.drop(columns=['product_name'], inplace=True)
         dff2 = [dff2.columns.tolist()] + dff2.values.tolist()
-
 
         # Create a new workbook and sheet
         wb = openpyxl.Workbook()
@@ -93,7 +94,7 @@ def export_data(clicks, vdata):
             cell.fill = header_fill
             cell.border = header_border
 
-        # Apply conditional formatting to the "Age" column
+        # Apply conditional formatting to the "profit" and "order_id" column
         red_fill = PatternFill(start_color="FF0000", end_color="FF0000", fill_type="solid")
         border = Border(left=Side(border_style="thin"), right=Side(border_style="thin"))
 
@@ -108,9 +109,9 @@ def export_data(clicks, vdata):
             cell_col9.border = border
             cell_col1.border = border
 
-
         # Add a row for the total
-        total_row = ['Total', None, None, None, None, None, f"=SUBTOTAL(109, G2:G{sheet.max_row})", f"=SUBTOTAL(109, H2:H{sheet.max_row})", f"=SUBTOTAL(109, I2:I{sheet.max_row})"]
+        total_row = ['Total', None, None, None, None, None, f"=SUBTOTAL(109, G2:G{sheet.max_row})",
+                     f"=SUBTOTAL(109, H2:H{sheet.max_row})", f"=SUBTOTAL(109, I2:I{sheet.max_row})"]
         sheet.append(total_row)
 
         # Apply formatting to the total row
@@ -126,20 +127,19 @@ def export_data(clicks, vdata):
             cell.font = total_font
             cell.border = total_border
         # Create Excel table
-        table = openpyxl.worksheet.table.Table(displayName="MyTable", ref=f"A1:I{last_row_index}")
-        table.tableStyleInfo = openpyxl.worksheet.table.TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
-                                                                       showLastColumn=False, showRowStripes=True,
-                                                                       showColumnStripes=False)
+        table = openpyxl.worksheet.grid.Table(displayName="MyTable", ref=f"A1:I{last_row_index}")
+        table.tableStyleInfo = openpyxl.worksheet.grid.TableStyleInfo(name="TableStyleMedium2", showFirstColumn=False,
+                                                                      showLastColumn=False, showRowStripes=True,
+                                                                      showColumnStripes=False)
         sheet.add_table(table)
+        # Save Excel workbook to BytesIO stream
         output = BytesIO()
         wb.save(output)
-
-        # Seek to the beginning of the BytesIO stream
         output.seek(0)
 
         # Return the content for download
         return dcc.send_bytes(output.read(), filename="data.xlsx")
 
-if __name__ == '__main__':
-    app.run(debug=True)
 
+if __name__ == '__main__':
+    app.run()
